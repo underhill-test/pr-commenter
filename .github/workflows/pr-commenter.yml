@@ -1,0 +1,27 @@
+name: Thank external contributors
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check author association
+        id: check
+        run: |
+          echo "association=${{ github.event.pull_request.author_association }}" >> $GITHUB_OUTPUT
+
+      - name: Add thank you comment
+        if: ${{ steps.check.outputs.association != 'MEMBER' && steps.check.outputs.association != 'OWNER' && steps.check.outputs.association != 'COLLABORATOR' }}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "🎉 Thank you for your contribution! We appreciate your support. 🙌"
+            })
