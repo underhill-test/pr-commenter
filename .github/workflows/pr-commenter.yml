@@ -8,13 +8,31 @@ jobs:
   comment:
     runs-on: ubuntu-latest
     steps:
-      - name: Check author association
-        id: check
-        run: |
-          echo "association=${{ github.event.pull_request.author_association }}" >> $GITHUB_OUTPUT
+      - name: Check if author is org member
+        id: org-check
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const org = context.repo.owner;
+            const user = context.payload.pull_request.user.login;
+
+            try {
+              await github.rest.orgs.checkMembershipForUser({
+                org,
+                username: user,
+              });
+              core.setOutput("isOrgMember", "true");
+            } catch (error) {
+              if (error.status === 404) {
+                core.setOutput("isOrgMember", "false");
+              } else {
+                throw error;
+              }
+            }
 
       - name: Add thank you comment
-        if: ${{ steps.check.outputs.association != 'MEMBER' && steps.check.outputs.association != 'OWNER' && steps.check.outputs.association != 'COLLABORATOR' }}
+        if: steps.org-check.outputs.isOrgMember == 'false'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
